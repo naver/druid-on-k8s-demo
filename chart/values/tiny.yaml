@@ -1,0 +1,150 @@
+#  Druid on K8S
+#  Copyright (c) 2023-present NAVER Corp.
+#  Apache-2.0
+
+## overwrite values.yaml
+hdfs:
+  enable: false
+deepStorage:
+  type: local
+metadataStorage:
+  type: derby
+
+nginx:
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+## tiny.yaml
+pvc:
+  disablePVCDeletionFinalizer: false
+
+brokers:
+  use: true
+  replicas: 1
+  http:
+    numConnections: 5
+    numThreads: 6
+  enableSql: true
+  jvmOptions:
+    minHeapSize: 512M
+    maxHeapSize: 512M
+    maxDirectMemorySize: 400M
+  resources:
+    limits:
+      cpu: 200m
+      memory: 1G
+      ephemeralStorage: 1G
+    requests:
+      cpu: 200m
+      memory: 512M
+      ephemeralStorage: 1G
+
+historicals:
+  use: true
+  replicas: 1
+  http:
+    numThreads: 6
+  segmentCache:
+    path: /druid/data/deepstorage
+    volumeSize: 1Gi
+    numBootstrapThreads: 1
+  jvmOptions:
+    minHeapSize: 256M
+    maxHeapSize: 512M
+    maxDirectMemorySize: 400M
+  resources:
+    limits:
+      cpu: 200m
+      memory: 1G
+      ephemeralStorage: 2G
+    requests:
+      cpu: 100m
+      memory: 512M
+      ephemeralStorage: 1G
+
+coordinators:
+  use: true
+  replicas: 2
+  enableOverlord: true
+  period: PT30S
+  indexer:
+    logs:
+      type: file
+      retention:
+        enabled: true
+        durationDays: 1
+    runnerType: httpRemote
+  jvmOptions:
+    minHeapSize: 256M
+    maxHeapSize: 256M
+  resources:
+    limits:
+      cpu: 200m
+      memory: 512Mi
+      ephemeralStorage: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+      ephemeralStorage: 512Mi
+
+middlemanagers:
+  use: true
+  workerCapacity: 2
+  replicas: 1
+  http:
+    numThreads: 6
+  jvmOptions:
+    minHeapSize: 64M
+    maxHeapSize: 64M
+  resources:
+    limits:
+      cpu: 1
+      memory: 1G
+      ephemeralStorage: 2G
+    requests:
+      cpu: 100m
+      memory: 512M
+      ephemeralStorage: 1G
+  peon:
+    taskHadoopWorkingPath: /tmp/druid-indexing
+    jvmOptions:
+      maxDirectMemorySize: 300M
+      maxHeapSize: 256M
+
+routers:
+  use: true
+  replicas: 1
+  http:
+    numConnections: 10
+    readTimeout: PT5M
+    numMaxThreads: 10
+    numThreads: 10
+  jvmOptions:
+    minHeapSize: 128M
+    maxHeapSize: 128M
+  resources:
+    limits:
+      cpu: 200m
+      memory: 512M
+      ephemeralStorage: 1G
+    requests:
+      cpu: 100m
+      memory: 128M
+      ephemeralStorage: 128M
+
+proxy:
+  replicas: 1
+  resources:
+    limits:
+      cpu: "1"
+      memory: 1Gi
+      ephemeralStorage: 1Gi
+    requests:
+      cpu: "200m"
+      memory: 512M
+      ephemeralStorage: 1Gi

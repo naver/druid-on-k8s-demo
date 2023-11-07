@@ -1,0 +1,132 @@
+#  Druid on K8S
+#  Copyright (c) 2023-present NAVER Corp.
+#  Apache-2.0
+
+pvc:
+  disablePVCDeletionFinalizer: true
+
+brokers:
+  use: true
+  replicas: 3
+  http:
+    numConnections: 20
+    numThreads: 40
+  enableSql: true
+  jvmOptions:
+    minHeapSize: 4G
+    maxHeapSize: 4G
+    maxDirectMemorySize: 2G
+  resources:
+    limits:
+      cpu: 8
+      memory: 8G
+      ephemeralStorage: 16G
+    requests:
+      cpu: 4
+      memory: 8G
+      ephemeralStorage: 8G
+
+historicals:
+  use: true
+  replicas: 15
+  http:
+    numThreads: 40
+  segmentCache:
+    path: /druid/data/deepstorage
+    cephVolumeSize: 2Ti
+    numBootstrapThreads: 50
+  jvmOptions:
+    minHeapSize: 16G
+    maxHeapSize: 16G
+    maxDirectMemorySize: 8G
+  resources:
+    limits:
+      cpu: 16
+      memory: 32G
+      ephemeralStorage: 16G
+    requests:
+      cpu: 8
+      memory: 32G
+      ephemeralStorage: 8G
+
+coordinators:
+  use: true
+  replicas: 3
+  enableOverlord: true
+  period: PT30S
+  indexer:
+    logs:
+      type: hdfs
+      retention:
+        enabled: true
+        durationDays: 7
+    runnerType: remote
+  jvmOptions:
+    minHeapSize: 8G
+    maxHeapSize: 8G
+  resources:
+    limits:
+      cpu: 8
+      memory: 16G
+      ephemeralStorage: 8G
+    requests:
+      cpu: 2
+      memory: 8G
+      ephemeralStorage: 4G
+
+middlemanagers:
+  use: true
+  workerCapacity: 3
+  replicas: 20
+  http:
+    numThreads: 10
+  jvmOptions:
+    minHeapSize: 192M
+    maxHeapSize: 192M
+  resources:
+    limits:
+      cpu: 8
+      memory: 12G
+      ephemeralStorage: 32G
+    requests:
+      cpu: 2
+      memory: 4G
+      ephemeralStorage: 16G
+  peon:
+    taskHadoopWorkingPath: /tmp/druid-indexing
+    jvmOptions:
+      maxDirectMemorySize: 1500M
+      maxHeapSize: 1G
+
+routers:
+  use: true
+  replicas: 2
+  http:
+    numConnections: 10
+    readTimeout: PT5M
+    numMaxThreads: 10
+    numThreads: 10
+  jvmOptions:
+    minHeapSize: 512M
+    maxHeapSize: 512M
+  resources:
+    limits:
+      cpu: 4
+      memory: 16G
+      ephemeralStorage: 8G
+    requests:
+      cpu: 2
+      memory: 8G
+      ephemeralStorage: 4G
+
+proxy:
+  replicas: 2
+  resources:
+    limits:
+      cpu: "4"
+      memory: 4Gi
+      ephemeral-storage: 1Gi
+    requests:
+      cpu: "2"
+      memory: 4Gi
+      ephemeral-storage: 1Gi

@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-turnilo
+  labels:
+spec:
+  replicas: 1
+  serviceName: {{ .Release.Name }}-turnilo
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-turnilo
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-turnilo
+      annotations:
+        ncc.navercorp.com/l4-weights: {{ .Release.Name }}-turnilo
+    spec:
+      {{- if .Values.nodeSelector }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      initContainers:
+        - name: wait-broker-ready
+          image: {{ .Values.turnilo.image.name }}:{{ .Values.turnilo.image.tag }}
+          command: ["/bin/bash"]
+          args:
+            - "-c"
+            - |
+              NAMESPACE=$(</var/run/secrets/kubernetes.io/serviceaccount/namespace)
+
+              # Purpose of initContainer
+              #
+              # Wait until the broker is ready
+              # This is what happens when Turnilo runs when the broker is not ready.
+              # Error message) Cluster 'druid' could not introspect
+              # '<datasource_name>' because: malformed segmentMetadata response
+              # Once an error occurs in turnilo, turnilo does not return to normal even if the broker is ready.
+
+              function log_msg()
+              {
+                echo "[$(date)] $@"
+              }
+
+              function get_broker_status()
+              {
+                echo $(curl  \
+                        --silent \
+                        http://druid-{{ .Release.Name }}-brokers/status/health)
+              }
+
+              log_msg "wait until broker is ready"
+
+              broker_status=$(get_broker_status)
+
+              log_msg "broker_status='${broker_status}'"
+
+              sleep_in_sec=5
+
+              while [ "$broker_status" != "true" ]
+              do
+                log_msg "sleep ${sleep_in_sec} secs"
+                
+                sleep $sleep_in_sec
+
+                broker_status=$(get_broker_status)
+
+                log_msg "broker_status='${broker_status}'"
+              done
+
+              log_msg "broker is ready"
+
+              sleep_in_sec=60
+
+              # If the broker needs to prepare, the data source may not be ready.
+              # To be safe, try sleeping for about 60 seconds more
+              log_msg "sleep ${sleep_in_sec} secs to ensure dataSources are ready"
+              sleep $sleep_in_sec
+
+              log_msg "let's run turnilo"
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+              ephemeral-storage: 100Mi
+            requests:
+              cpu: "1"
+              memory: 1Gi
+              ephemeral-storage: 100Mi
+      containers:
+        - name: turnilo
+          image: {{ .Values.turnilo.image.name }}:{{ .Values.turnilo.image.tag }}
+          command: ["/bin/bash"]
+          args:
+            - "-c"
+            - |
+              NAMESPACE=$(</var/run/secrets/kubernetes.io/serviceaccount/namespace)
+              
+              /bin/cp /mnt/turnilo-config/config.yaml-template /tmp/config.yaml
+
+              /bin/sed -i \
+                -e "s/@DRUID_CLUSTER_NAME@/{{ .Release.Name }}/" \
+                -e "s/@NAMESPACE@/$NAMESPACE/" \
+                /tmp/config.yaml
+
+              ./node_modules/turnilo/bin/turnilo run-config /tmp/config.yaml
+          imagePullPolicy: {{ .Values.turnilo.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 9090
+              protocol: TCP
+          volumeMounts:
+            - name: turnilo-config
+              mountPath: /mnt/turnilo-config
+          resources:
+            limits:
+              cpu: {{ .Values.proxy.resources.limits.cpu }}
+              memory: {{ .Values.proxy.resources.limits.memory }}
+              ephemeral-storage: {{ .Values.proxy.resources.limits.ephemeralStorage }}
+            requests:
+              cpu: {{ .Values.proxy.resources.requests.cpu }}
+              memory: {{ .Values.proxy.resources.requests.memory }}
+              ephemeral-storage: {{ .Values.proxy.resources.requests.ephemeralStorage }}
+      volumes:
+        - name: turnilo-config
+          configMap:
+            name: {{ .Release.Name }}-turnilo-config

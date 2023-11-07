@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-turnilo-config
+data:
+  config.yaml-template: |-
+   {{- .Files.Get "files-to-inject/turnilo/config.yaml-template" | nindent 4 }}

@@ -1,0 +1,12 @@
+#  Druid on K8S
+#  Copyright (c) 2023-present NAVER Corp.
+#  Apache-2.0
+apiVersion: v2
+name: deploy-druid
+description: deploy druid cluster by druid operator
+
+type: application
+
+version: 0.1.5
+
+appVersion: "0.0.9"

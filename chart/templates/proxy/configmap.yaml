@@ -1,0 +1,12 @@
+#  Druid on K8S
+#  Copyright (c) 2023-present NAVER Corp.
+#  Apache-2.0
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-proxy-config
+data:
+  nginx.conf: |-
+   {{- .Files.Get "files-to-inject/proxy/nginx.conf" | nindent 4 }}
+  htpasswd: |-
+   {{- .Files.Get "files-to-inject/proxy/htpasswd" | nindent 4 }}

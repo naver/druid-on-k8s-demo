@@ -1,0 +1,15 @@
+#  Druid on K8S
+#  Copyright (c) 2023-present NAVER Corp.
+#  Apache-2.0
+{{- if .Values.kerberos.enable }}
+#
+# krb5 configmap
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-krb5-kr
+data:
+  {{- (.Files.Glob "files-to-inject/druid/krb5-kr/*").AsConfig | nindent 2 }}
+---
+{{- end}}

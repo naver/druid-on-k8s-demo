@@ -1,0 +1,21 @@
+#  Druid on K8S
+#  Copyright (c) 2023-present NAVER Corp.
+#  Apache-2.0
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}-proxy
+  annotations:
+spec:
+  type: LoadBalancer
+  ports:
+    - name: router
+      port: 8081
+    - name: broker
+      port: 8082
+    - name: turnilo
+      port: 8083
+  selector:
+    app: {{ .Release.Name }}-proxy

@@ -1,0 +1,65 @@
+#  Druid on K8S
+#  Copyright (c) 2023-present NAVER Corp.
+#  Apache-2.0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-proxy
+  labels:
+    app: {{ .Release.Name }}-proxy
+spec:
+  replicas: {{ .Values.proxy.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-proxy
+  template:
+    metadata:
+      name: {{ .Release.Name }}-proxy
+      labels:
+        app: {{ .Release.Name }}-proxy
+    spec:
+      {{- if .Values.nodeSelector }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      containers:
+        - name: nginx
+          image: {{ .Values.nginx.image.name }}:{{ .Values.nginx.image.tag }}
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          ports:
+            - name: router
+              containerPort: 8081
+            - name: broker
+              containerPort: 8082
+            - name: turnilo
+              containerPort: 8083
+          command: [ "/bin/bash" ]
+          args:
+            - "-c"
+            - |
+              NAMESPACE=$(</var/run/secrets/kubernetes.io/serviceaccount/namespace)
+
+              # Find out the nameserver set in pod's /etc/resolv.conf
+              NAMESERVER=$(cat /etc/resolv.conf | grep "nameserver" | awk '{print $2}' | tr '\n' ' ')
+
+              /bin/cp /mnt/proxy-config/nginx.conf /etc/nginx/nginx.conf
+              /bin/cp /mnt/proxy-config/htpasswd /etc/nginx/htpasswd
+              
+              /bin/sed -i \
+                -e "s/@DRUID_CLUSTER_NAME@/{{ .Release.Name }}/" \
+                -e "s/@NAMESPACE@/$NAMESPACE/" \
+                -e "s/@NAMESERVER@/$NAMESERVER/" \
+                /etc/nginx/nginx.conf
+              
+              nginx
+          volumeMounts:
+            - name: proxy-config
+              mountPath: /mnt/proxy-config
+          resources:
+            {{- toYaml .Values.nginx.resources | nindent 12 }}
+      volumes:
+        - name: proxy-config
+          configMap:
+            name: {{ .Release.Name }}-proxy-config

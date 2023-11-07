@@ -1,0 +1,16 @@
+# Druid on K8S
+# Copyright (c) 2023-present NAVER Corp.
+# Apache-2.0
+port: 9090
+customization:
+  timezones:
+    - Asia/Seoul
+clusters:
+  - name: @DRUID_CLUSTER_NAME@
+    url: http://druid-@DRUID_CLUSTER_NAME@-brokers
+    sourceListScan: auto
+    sourceListRefreshOnLoad: false
+    sourceListRefreshInterval: 300000
+    sourceReintrospectOnLoad: false
+    sourceReintrospectInterval: 0
+    introspectionStrategy: segment-metadata-fallback

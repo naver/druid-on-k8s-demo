@@ -1,0 +1,110 @@
+#  Druid on K8S
+#  Copyright (c) 2023-present NAVER Corp.
+#  Apache-2.0
+apiVersion: "druid.apache.org/v1alpha1"
+kind: "Druid"
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "deploy-druid.labels" . | nindent 4 }}
+spec:
+  image: {{ .Values.image.name }}:{{ .Values.image.tag }}
+  imagePullPolicy: {{ .Values.image.pullPolicy }}
+  {{- with .Values.image.pullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  startScript: /druid.sh
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.prometheus.port }}"
+  {{- if .Values.nodeSelector }}
+  {{- with .Values.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  disablePVCDeletionFinalizer: {{ .Values.pvc.disablePVCDeletionFinalizer }}
+  readinessProbe:
+    httpGet:
+      path: /status/health
+      port: {{ .Values.druid.port }} # Since this is the health check port of all roles, the druid.port of each role must also be assigned the same value.
+    initialDelaySeconds: 20
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 5
+  securityContext:
+    fsGroup: 0
+    runAsUser: 0
+    runAsGroup: 0
+  services:
+    - spec:
+        type: ClusterIP
+        clusterIP: None
+        ports:
+          - name: http
+            port: {{ .Values.druid.port }}
+  commonConfigMountPath: "/opt/druid/conf/druid/cluster/_common"
+  jvm.options: |-
+    {{- include "jvm.options" . | indent 4 }}
+  common.runtime.properties: |-
+    {{- include "common-runtime" . | indent 4 }}
+  metricDimensions.json: |-
+    {{- include "metric-dimensions" . | indent 4 }}
+  volumeMounts:
+    - mountPath: /druid/data
+      name: data-volume
+    {{- if .Values.kerberos.enable }}
+    - mountPath: /etc/krb5.conf
+      name: krb5
+      subPath: krb5.conf
+    - mountPath: /etc/keytab
+      name: keytab
+    {{- end }}
+  volumes:
+    - name: data-volume
+      emptyDir: { }
+    {{- if .Values.kerberos.enable }}
+    - name: keytab
+      secret:
+        secretName: {{ .Release.Name }}-keytab
+        defaultMode: 420
+    - name: krb5
+      configMap:
+        name: {{ .Release.Name }}-krb5-kr
+        defaultMode: 420
+    {{- end }}
+  env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+  nodes:
+    {{- if .Values.brokers.use }}
+    brokers:
+      {{- include "broker" . | indent 6 }}
+    {{- end }}
+
+    {{- if .Values.historicals.use }}
+    historicals:
+      {{- include "historical" . | indent 6 }}
+    {{- end }}
+
+    {{- if .Values.coordinators.use }}
+    coordinators:
+      {{- include "coordinator" . | indent 6 }}
+    {{- end }}
+
+    {{- if .Values.middlemanagers.use }}
+    middlemanagers:
+      {{- include "middlemanager" . | indent 6 }}
+    {{- end }}
+
+    {{- if .Values.routers.use }}
+    routers:
+      {{- include "router" . | indent 6 }}
+    {{- end }}

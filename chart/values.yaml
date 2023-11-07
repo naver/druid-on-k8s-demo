@@ -1,0 +1,90 @@
+#  Druid on K8S
+#  Copyright (c) 2023-present NAVER Corp.
+#  Apache-2.0
+druid:
+  port: 80
+prometheus:
+  port: 8090
+
+kerberos:
+  enable: false
+  user: ""
+  # keytab: Base64 encoded keytab file contents
+  # 예) cat <keytab-file> | base64
+  keytab: ""
+hdfs:
+  enable: true
+  nameservice: nameservice1
+
+common:
+  log4j:
+    debugEnabled: false
+    logLevel: INFO
+
+# When using nodeSelector, just enter the following
+# nodeSelector:
+#   role: druid
+
+extensions:
+  - druid-histogram
+  - druid-datasketches
+  - mysql-metadata-storage
+  - druid-hdfs-storage
+  - druid-avro-extensions
+  - druid-parquet-extensions
+  - druid-kafka-indexing-service
+  - druid-lookups-cached-single
+  - druid-lookups-cached-global
+  - druid-time-min-max
+  - prometheus-emitter
+  - druid-basic-security
+  - druid-multi-stage-query
+
+metadataStorage:
+  type: mysql
+  connectURI: ""
+  driverClassName: com.mysql.jdbc.Driver
+  user: druid
+  password: ""
+  createTables: true
+
+deepStorage:
+  type: hdfs
+
+zookeeper:
+  host: ""
+  clientPort: 2181
+
+monitors:
+  common:
+    - org.apache.druid.client.cache.CacheMonitor
+    - org.apache.druid.java.util.metrics.JvmMonitor
+  routers: []
+  coordinators:
+    - org.apache.druid.server.metrics.TaskCountStatsMonitor
+  brokers:
+    - org.apache.druid.server.metrics.QueryCountStatsMonitor
+  middlemanagers:
+    - org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor
+  historicals:
+    - org.apache.druid.server.metrics.QueryCountStatsMonitor
+    - org.apache.druid.server.metrics.HistoricalMetricsMonitor
+
+image:
+  name: apache/druid
+  tag: 27.0.0
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+turnilo:
+  image:
+    name: salemove/turnilo
+    tag: latest
+    pullPolicy: IfNotPresent
+
+nginx:
+  image:
+    name: nginx
+    tag: 1.24.0
+    pullPolicy: IfNotPresent
+  resources: {}

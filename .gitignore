@@ -1,0 +1,7 @@
+### VisualStudioCode ###
+.vscode/*
+.history
+.idea*
+.idea/*
+
+druid-operator
