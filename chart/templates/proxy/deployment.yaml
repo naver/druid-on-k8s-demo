@@ -46,7 +46,14 @@ spec:
 
               /bin/cp /mnt/proxy-config/nginx.conf /etc/nginx/nginx.conf
               /bin/cp /mnt/proxy-config/htpasswd /etc/nginx/htpasswd
-              
+              /bin/cp /mnt/proxy-config/nginx-rotate-logs.sh /usr/local/bin/nginx-rotate-logs.sh
+
+              chmod 755 /usr/local/bin/nginx-rotate-logs.sh
+
+              /usr/local/bin/nginx-rotate-logs.sh \
+                /var/log/nginx/access.log \
+                /var/log/nginx/error.log &
+
               /bin/sed -i \
                 -e "s/@DRUID_CLUSTER_NAME@/{{ .Release.Name }}/" \
                 -e "s/@NAMESPACE@/$NAMESPACE/" \
