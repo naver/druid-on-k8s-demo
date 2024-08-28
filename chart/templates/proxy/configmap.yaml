@@ -7,6 +7,8 @@ metadata:
   name: {{ .Release.Name }}-proxy-config
 data:
   nginx.conf: |-
-   {{- .Files.Get "files-to-inject/proxy/nginx.conf" | nindent 4 }}
+    {{- .Files.Get "files-to-inject/proxy/nginx.conf" | nindent 4 }}
   htpasswd: |-
-   {{- .Files.Get "files-to-inject/proxy/htpasswd" | nindent 4 }}
+    {{- .Files.Get "files-to-inject/proxy/htpasswd" | nindent 4 }}
+  nginx-rotate-logs.sh: |-
+    {{- .Files.Get "files-to-inject/proxy/nginx-rotate-logs.sh" | nindent 4 }}
